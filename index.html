@@ -117,8 +117,18 @@
       const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
       const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
 
-      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
-      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
+      if (xeEur.rates && xeEur.rates.RUB) {
+        document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
+      } else {
+        document.getElementById('xe-eur').textContent = 'EUR: —';
+      }
+
+      if (xeAed.rates && xeAed.rates.EUR) {
+        document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
+      } else {
+        document.getElementById('xe-aed').textContent = 'AED: —';
+      }
+
       document.getElementById('xe-time').textContent = formatTime();
     } catch (err) {
       console.error('Ошибка загрузки:', err);
@@ -130,7 +140,3 @@
 
 </body>
 </html>
-
-</body>
-</html>
-
