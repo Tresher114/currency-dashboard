@@ -15,46 +15,41 @@
       --muted: #8C92A4;
     }
 
-    body.light {
-      --bg: #ffffff;
-      --card: #ffffff;
-      --text: #000000;
-      --accent: #00796B;
-      --muted: #666;
-    }
-
     html, body {
       margin: 0;
       padding: 0;
       background: var(--bg);
       color: var(--text);
       font-family: sans-serif;
-      font-size: 1.2vw;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      overflow-x: hidden;
+      font-size: 1vw;
+      overflow: hidden;
     }
 
-    .grid {
+    .grid-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1.5em;
-      width: 95vw;
-      max-width: 1800px;
-      margin-top: 1em;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto auto;
+      gap: 1vh 1vw;
+      padding: 1vh 1vw;
+      height: 100vh;
+      box-sizing: border-box;
     }
 
     .card {
       background: var(--card);
       border-radius: 1em;
-      padding: 1.5em;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      padding: 1.5vh 1vw;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       text-align: center;
+      height: 100%;
     }
 
     .rate {
-      font-size: 2vw;
+      font-size: 1.5vw;
       margin: 0.5em 0;
       color: var(--accent);
       font-weight: bold;
@@ -64,30 +59,53 @@
 
     canvas {
       width: 100% !important;
-      height: auto !important;
-      max-height: 40vh;
+      height: 100% !important;
     }
 
-    .controls {
+    .floating-controls {
+      position: fixed;
+      bottom: 1vh;
+      left: 1vw;
+      background: var(--card);
+      border-radius: 1em;
+      padding: 1vh 1vw;
       display: flex;
-      justify-content: center;
+      gap: 1vw;
       align-items: center;
-      gap: 1em;
-      margin: 1em;
-      flex-wrap: wrap;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
     }
 
-    select, button {
-      font-size: 1.2vw;
-      padding: 0.5em 1em;
+    select {
+      font-size: 1vw;
+      padding: 0.5vh 1vw;
       border-radius: 0.5em;
       cursor: pointer;
+    }
+
+    .chart-row {
+      display: flex;
+      grid-column: span 3;
+      gap: 1vw;
+      height: 100%;
+    }
+
+    .chart-card {
+      flex: 1;
+      background: var(--card);
+      border-radius: 1em;
+      padding: 1.5vh 1vw;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
   </style>
 </head>
 <body>
 
-<div class="grid">
+<div class="grid-container">
   <div class="card">
     <h2>🏦 Центробанк РФ</h2>
     <div id="cbr-usd" class="rate loading">Загрузка...</div>
@@ -105,138 +123,124 @@
   </div>
 
   <div class="card">
-    <h2>📉 Profinanse</h2>
-    <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
-    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanse.ru</div>
+    <h2>📉 Profinanse & GOLD</h2>
+    <div id="profinanse-usd" class="rate loading">Загрузка...</div>
+    <div id="gold-usd" class="rate loading">Загрузка...</div>
+    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanse.net</div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <h2>📊 USD/RUB</h2>
+      <canvas id="usdChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h2>📊 EUR/USD</h2>
+      <canvas id="eurChart"></canvas>
+    </div>
   </div>
 </div>
 
-<div class="grid">
-  <div class="card">
-    <h2>📊 USD/RUB</h2>
-    <canvas id="usdChart"></canvas>
-  </div>
-  <div class="card">
-    <h2>📊 EUR/USD</h2>
-    <canvas id="eurChart"></canvas>
-  </div>
-</div>
-
-<div class="card controls">
+<div class="floating-controls">
   <label for="range-select">Период:</label>
   <select id="range-select" onchange="refreshCharts()">
     <option value="7">7 дней</option>
     <option value="14">14 дней</option>
     <option value="30">30 дней</option>
   </select>
-  <button onclick="toggleTheme()">🎨 Тема</button>
 </div>
 
 <script>
-  const UPDATE_INTERVAL = 60000;
-  const TWELVE_DATA_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
-
-  function formatTime(date = new Date()) {
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  }
-
   async function updateRates() {
     try {
-      const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
-      const cbr = await cbrRes.json();
+      const cbr = await fetch('https://www.cbr-xml-daily.ru/daily_json.js').then(r => r.json());
       document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
-      document.getElementById('cbr-time').textContent = formatTime();
+      document.getElementById('cbr-time').textContent = new Date().toLocaleTimeString();
 
       const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
       const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
-      document.getElementById('xe-eur').textContent = xeEur?.rates?.RUB ? `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽` : 'EUR: —';
-      document.getElementById('xe-aed').textContent = xeAed?.rates?.EUR ? `AED: ${xeAed.rates.EUR.toFixed(2)} €` : 'AED: —';
-      document.getElementById('xe-time').textContent = formatTime();
+
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
+      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
+      document.getElementById('xe-time').textContent = new Date().toLocaleTimeString();
+
+      const profRes = await fetch('https://api.allorigins.win/raw?url=https://profinanse.ru/usd');
+      const profText = await profRes.text();
+      const match = profText.match(/\d+(\.\d+)?/);
+      if (match) document.getElementById('profinanse-usd').textContent = `≈ ${match[0]} ₽`;
+
+      const goldRes = await fetch('https://api.allorigins.win/raw?url=https://profinanse.ru/gold');
+      const goldText = await goldRes.text();
+      const gmatch = goldText.match(/\d+(\.\d+)?/);
+      if (gmatch) document.getElementById('gold-usd').textContent = `GOLD: ${gmatch[0]} $`;
+
     } catch (err) {
-      console.error('Ошибка загрузки:', err);
+      console.error('Ошибка загрузки данных:', err);
     }
   }
 
-  async function loadChart(symbol, toSymbol, canvasId, chartRef) {
+  async function loadChart(pair, canvasId) {
     try {
-      const days = parseInt(document.getElementById('range-select').value);
-      const end = new Date();
-      const start = new Date();
-      start.setDate(end.getDate() - days);
-      const format = d => d.toISOString().split('T')[0];
-
-      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}/${toSymbol}&interval=1day&start_date=${format(start)}&end_date=${format(end)}&apikey=${TWELVE_DATA_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!data.values) throw new Error('Данные не найдены');
-
+      const range = document.getElementById('range-select').value;
+      const response = await fetch(`https://api.twelvedata.com/time_series?symbol=${pair}&interval=1day&outputsize=${range}&apikey=3a35c003318a4699a55d5c1581b6ebe8`);
+      const data = await response.json();
       const labels = data.values.map(v => v.datetime).reverse();
-      const rates = data.values.map(v => parseFloat(v.close)).reverse();
+      const prices = data.values.map(v => parseFloat(v.close)).reverse();
 
-      if (window[chartRef] instanceof Chart) window[chartRef].destroy();
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      if (window[canvasId + 'Chart']) window[canvasId + 'Chart'].destroy();
 
-      window[chartRef] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+      window[canvasId + 'Chart'] = new Chart(ctx, {
         type: 'line',
         data: {
           labels,
           datasets: [{
-            label: `${symbol} → ${toSymbol}`,
-            data: rates,
-            borderColor: symbol === 'USD' ? 'limegreen' : 'deepskyblue',
+            label: pair,
+            data: prices,
+            borderColor: pair === 'USD/RUB' ? '#00C853' : '#03A9F4',
             backgroundColor: 'transparent',
-            tension: 0.3,
-            pointRadius: 3
+            tension: 0.4
           }]
         },
         options: {
           plugins: {
             datalabels: {
-              align: 'top',
               color: '#fff',
-              formatter: v => v.toFixed(2)
-            }
+              align: 'top',
+              formatter: (value) => value.toFixed(2)
+            },
+            legend: { labels: { color: '#fff' } }
           },
           scales: {
-            y: { title: { display: true, text: 'Курс' } },
-            x: { title: { display: true, text: 'Дата' } }
-          },
-          responsive: true
+            x: { ticks: { color: '#fff' } },
+            y: { ticks: { color: '#fff' } }
+          }
         },
         plugins: [ChartDataLabels]
       });
+
     } catch (err) {
-      console.error(`Ошибка загрузки графика ${symbol}/${toSymbol}:`, err);
+      console.error(`Ошибка загрузки графика ${pair}:`, err);
     }
   }
 
   function refreshCharts() {
-    loadChart('USD', 'RUB', 'usdChart', 'usdChartInstance');
-    loadChart('EUR', 'USD', 'eurChart', 'eurChartInstance');
-  }
-
-  function toggleTheme() {
-    document.body.classList.toggle('light');
+    loadChart('USD/RUB', 'usdChart');
+    loadChart('EUR/USD', 'eurChart');
   }
 
   updateRates();
   refreshCharts();
-  setInterval(() => {
-    updateRates();
-    refreshCharts();
-  }, UPDATE_INTERVAL);
-
-  // Полноэкранный режим при загрузке
-  document.addEventListener("DOMContentLoaded", () => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen();
-    }
-  });
+  setInterval(updateRates, 60000);
+  setInterval(refreshCharts, 60000);
 </script>
 
 </body>
 </html>
+
 
 
