@@ -114,14 +114,14 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RUB').then(r => r.json());
-      const xeAed = await fetch('https://api.frankfurter.app/latest?from=AED&to=EUR').then(r => r.json());
+      const xeEur = await fetch('https://v6.exchangerate-api.com/v6/70ae1163ce4a925c7230c499/latest/EUR').then(r => r.json());
+      const xeAed = await fetch('https://v6.exchangerate-api.com/v6/70ae1163ce4a925c7230c499/latest/AED').then(r => r.json());
 
       console.log("XE EUR Response:", xeEur);
       console.log("XE AED Response:", xeAed);
 
-      const xeEurRate = xeEur.rates?.RUB;
-      const xeAedRate = xeAed.rates?.EUR;
+      const xeEurRate = xeEur.conversion_rates?.RUB;
+      const xeAedRate = xeAed.conversion_rates?.EUR;
 
       if (typeof xeEurRate === "number") {
         document.getElementById('xe-eur').textContent = `EUR: ${xeEurRate.toFixed(2)} ₽`;
@@ -146,3 +146,4 @@
 
 </body>
 </html>
+
