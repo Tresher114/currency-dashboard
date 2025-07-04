@@ -21,26 +21,31 @@
       background: var(--bg);
       color: var(--text);
       font-family: sans-serif;
-      font-size: 2vw;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      overflow-x: hidden;
+      font-size: 1.8vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 1vh;
+      height: 100vh;
+      overflow: hidden;
     }
 
     .card {
       background: var(--card);
       border-radius: 1em;
-      padding: 2em;
-      margin: 1em;
-      width: 90vw;
+      padding: 2vh;
+      margin: 1vh;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       text-align: center;
     }
 
+    .full-span {
+      grid-column: 1 / -1;
+    }
+
     .rate {
-      font-size: 3vw;
-      margin: 0.5em 0;
+      font-size: 3vh;
+      margin: 1vh 0;
       color: var(--accent);
       font-weight: bold;
     }
@@ -48,16 +53,20 @@
     .loading { color: var(--muted); }
 
     select {
-      font-size: 1.5vw;
-      padding: 0.5em;
-      margin-bottom: 1em;
-      border-radius: 0.5em;
+      font-size: 2vh;
+      padding: 0.8vh 1.2vh;
+      margin-bottom: 1vh;
+      border-radius: 0.8vh;
     }
 
     canvas {
       width: 100% !important;
-      height: auto !important;
-      max-height: 60vh;
+      height: 30vh !important;
+    }
+
+    h2 {
+      font-size: 3vh;
+      margin-bottom: 1vh;
     }
   </style>
 </head>
@@ -69,23 +78,23 @@
   <div id="cbr-eur" class="rate loading">Загрузка...</div>
   <div id="cbr-cny" class="rate loading">Загрузка...</div>
   <div id="cbr-rub" class="rate loading">Загрузка...</div>
-  <div>Обновлено: <span id="cbr-time">–</span></div>
+  <div style="font-size: 1.8vh;">Обновлено: <span id="cbr-time">–</span></div>
 </div>
 
 <div class="card">
   <h2>🌐 XE.com</h2>
   <div id="xe-eur" class="rate loading">Загрузка...</div>
   <div id="xe-aed" class="rate loading">Загрузка...</div>
-  <div>Обновлено: <span id="xe-time">–</span></div>
+  <div style="font-size: 1.8vh;">Обновлено: <span id="xe-time">–</span></div>
 </div>
 
 <div class="card">
   <h2>📉 Profinanse</h2>
   <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
-  <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
+  <div style="color: var(--muted); font-size: 1.8vh;">Источник: profinanse.ru</div>
 </div>
 
-<div class="card">
+<div class="card full-span">
   <h2>📊 USD/RUB</h2>
   <select id="range-select" onchange="refreshCharts()">
     <option value="7">7 дней</option>
@@ -93,7 +102,10 @@
     <option value="30">30 дней</option>
   </select>
   <canvas id="usdChart"></canvas>
-  <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
+</div>
+
+<div class="card full-span">
+  <h2>📊 EUR/USD</h2>
   <canvas id="eurChart"></canvas>
 </div>
 
@@ -162,8 +174,8 @@
             }
           },
           scales: {
-            y: { title: { display: true, text: 'Курс' } },
-            x: { title: { display: true, text: 'Дата' } }
+            y: { title: { display: true, text: 'Курс' }, ticks: { font: { size: 14 } } },
+            x: { title: { display: true, text: 'Дата' }, ticks: { font: { size: 12 } } }
           },
           responsive: true
         },
@@ -184,6 +196,12 @@
   refreshCharts();
   setInterval(updateRates, UPDATE_INTERVAL);
   setInterval(refreshCharts, UPDATE_INTERVAL);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.warn('Fullscreen error:', err));
+    }
+  });
 </script>
 
 </body>
