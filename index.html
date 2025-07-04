@@ -15,36 +15,40 @@
       --muted: #8C92A4;
     }
 
+    body.light {
+      --bg: #ffffff;
+      --card: #f0f0f0;
+      --text: #000000;
+      --accent: #00796B;
+      --muted: #666;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       background: var(--bg);
       color: var(--text);
       font-family: sans-serif;
-      font-size: 1.4vw;
+      font-size: 1.5vw;
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(30vw, 1fr));
-      gap: 2vh 2vw;
-      width: 96vw;
-      padding: 2vh 0;
+      overflow-x: hidden;
     }
 
     .card {
       background: var(--card);
       border-radius: 1em;
-      padding: 2vh 2vw;
+      padding: 2em;
+      margin: 1em;
+      width: 90vw;
+      max-width: 1200px;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       text-align: center;
     }
 
     .rate {
-      font-size: 2vw;
+      font-size: 2.5vw;
       margin: 0.5em 0;
       color: var(--accent);
       font-weight: bold;
@@ -52,148 +56,168 @@
 
     .loading { color: var(--muted); }
 
-    select {
-      font-size: 1.5vw;
-      padding: 0.5em;
-      margin-bottom: 1em;
-      border-radius: 0.5em;
-    }
-
     canvas {
       width: 100% !important;
       height: auto !important;
-      max-height: 40vh;
+      max-height: 50vh;
+    }
+
+    .controls {
+      display: flex;
+      gap: 2em;
+      justify-content: center;
+      align-items: center;
+      margin: 1em;
+    }
+
+    select, button {
+      font-size: 1.2vw;
+      padding: 0.5em 1em;
+      border-radius: 0.5em;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-<div class="grid">
-  <div class="card">
-    <h2>🏦 Центробанк РФ</h2>
-    <div id="cbr-usd" class="rate loading">Загрузка...</div>
-    <div id="cbr-eur" class="rate loading">Загрузка...</div>
-    <div id="cbr-cny" class="rate loading">Загрузка...</div>
-    <div id="cbr-rub" class="rate loading">Загрузка...</div>
-    <div>Обновлено: <span id="cbr-time">–</span></div>
-  </div>
+<div class="card">
+  <h2>🏦 Центробанк РФ</h2>
+  <div id="cbr-usd" class="rate loading">Загрузка...</div>
+  <div id="cbr-eur" class="rate loading">Загрузка...</div>
+  <div id="cbr-cny" class="rate loading">Загрузка...</div>
+  <div id="cbr-rub" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="cbr-time">–</span></div>
+</div>
 
-  <div class="card">
-    <h2>🌐 XE.com</h2>
-    <div id="xe-eur" class="rate loading">Загрузка...</div>
-    <div id="xe-aed" class="rate loading">Загрузка...</div>
-    <div>Обновлено: <span id="xe-time">–</span></div>
-  </div>
+<div class="card">
+  <h2>🌐 XE.com</h2>
+  <div id="xe-eur" class="rate loading">Загрузка...</div>
+  <div id="xe-aed" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="xe-time">–</span></div>
+</div>
 
-  <div class="card">
-    <h2>📉 Profinanse</h2>
-    <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
-    <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
-  </div>
+<div class="card">
+  <h2>📉 Profinanse</h2>
+  <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
+  <div style="color: var(--muted); font-size: 1vw;">Источник: profinanse.ru</div>
+</div>
 
-  <div class="card">
-    <h2>📊 USD/RUB</h2>
-    <select id="range-select" onchange="refreshCharts()">
-      <option value="7">7 дней</option>
-      <option value="14">14 дней</option>
-      <option value="30">30 дней</option>
-    </select>
-    <canvas id="usdChart"></canvas>
-  </div>
+<div class="card controls">
+  <label for="range-select">Период:</label>
+  <select id="range-select" onchange="refreshCharts()">
+    <option value="7">7 дней</option>
+    <option value="14">14 дней</option>
+    <option value="30">30 дней</option>
+  </select>
+  <button onclick="toggleTheme()">🎨 Тема</button>
+</div>
 
-  <div class="card">
-    <h2>📊 EUR/USD</h2>
-    <canvas id="eurChart"></canvas>
-  </div>
+<div class="card">
+  <h2>📊 USD/RUB</h2>
+  <canvas id="usdChart"></canvas>
+  <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
+  <canvas id="eurChart"></canvas>
 </div>
 
 <script>
-const UPDATE_INTERVAL = 60000;
-const API_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
-let usdChart = null;
-let eurChart = null;
+  const UPDATE_INTERVAL = 60000; // 1 минута
+  const TWELVE_DATA_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
+  let usdChartInstance = null;
+  let eurChartInstance = null;
 
-function formatTime(date = new Date()) {
-  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-async function updateRates() {
-  try {
-    const cbr = await fetch('https://www.cbr-xml-daily.ru/daily_json.js').then(r => r.json());
-    document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
-    document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
-    document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
-    document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
-    document.getElementById('cbr-time').textContent = formatTime();
-
-    const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
-    const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
-    document.getElementById('xe-eur').textContent = xeEur?.rates?.RUB ? `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽` : 'EUR: —';
-    document.getElementById('xe-aed').textContent = xeAed?.rates?.EUR ? `AED: ${xeAed.rates.EUR.toFixed(2)} €` : 'AED: —';
-    document.getElementById('xe-time').textContent = formatTime();
-  } catch (e) {
-    console.error('Ошибка загрузки:', e);
+  function formatTime(date = new Date()) {
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   }
-}
 
-async function loadChart(pair, canvasId, chartRef) {
-  try {
-    const [from, to] = pair.split('/');
-    const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${pair}&interval=1day&outputsize=30&apikey=${API_KEY}`);
-    const data = await res.json();
-    if (!data?.values) throw new Error('Данные не найдены');
+  async function updateRates() {
+    try {
+      const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+      const cbr = await cbrRes.json();
+      document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
+      document.getElementById('cbr-time').textContent = formatTime();
 
-    const labels = data.values.map(p => p.datetime).reverse();
-    const rates = data.values.map(p => parseFloat(p.close)).reverse();
-
-    if (window[chartRef]) window[chartRef].destroy();
-
-    window[chartRef] = new Chart(document.getElementById(canvasId).getContext('2d'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: `${from} → ${to}`,
-          data: rates,
-          borderColor: from === 'USD' ? 'limegreen' : 'deepskyblue',
-          backgroundColor: 'transparent',
-          tension: 0.3,
-          pointRadius: 4
-        }]
-      },
-      options: {
-        plugins: {
-          datalabels: {
-            align: 'top',
-            color: '#fff',
-            formatter: v => v.toFixed(2)
-          }
-        },
-        scales: {
-          y: { title: { display: true, text: 'Курс' } },
-          x: { title: { display: true, text: 'Дата' } }
-        },
-        responsive: true
-      },
-      plugins: [ChartDataLabels]
-    });
-  } catch (e) {
-    console.error(`Ошибка загрузки графика ${pair}:`, e);
+      const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
+      const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
+      document.getElementById('xe-eur').textContent = xeEur?.rates?.RUB ? `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽` : 'EUR: —';
+      document.getElementById('xe-aed').textContent = xeAed?.rates?.EUR ? `AED: ${xeAed.rates.EUR.toFixed(2)} €` : 'AED: —';
+      document.getElementById('xe-time').textContent = formatTime();
+    } catch (err) {
+      console.error('Ошибка загрузки:', err);
+    }
   }
-}
 
-function refreshCharts() {
-  const days = document.getElementById('range-select').value;
-  loadChart('USD/RUB', 'usdChart', 'usdChart');
-  loadChart('EUR/USD', 'eurChart', 'eurChart');
-}
+  async function loadChart(symbol, toSymbol, canvasId, chartRef) {
+    try {
+      const days = parseInt(document.getElementById('range-select').value);
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - days);
+      const format = d => d.toISOString().split('T')[0];
 
-updateRates();
-refreshCharts();
-setInterval(updateRates, UPDATE_INTERVAL);
+      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}/${toSymbol}&interval=1day&start_date=${format(start)}&end_date=${format(end)}&apikey=${TWELVE_DATA_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.values) throw new Error('Данные не найдены');
+
+      const labels = data.values.map(v => v.datetime).reverse();
+      const rates = data.values.map(v => parseFloat(v.close)).reverse();
+
+      if (window[chartRef] instanceof Chart) window[chartRef].destroy();
+
+      window[chartRef] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: `${symbol} → ${toSymbol}`,
+            data: rates,
+            borderColor: symbol === 'USD' ? 'limegreen' : 'deepskyblue',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          plugins: {
+            datalabels: {
+              align: 'top',
+              color: '#fff',
+              formatter: v => v.toFixed(2)
+            }
+          },
+          scales: {
+            y: { title: { display: true, text: 'Курс' } },
+            x: { title: { display: true, text: 'Дата' } }
+          },
+          responsive: true
+        },
+        plugins: [ChartDataLabels]
+      });
+    } catch (err) {
+      console.error(`Ошибка загрузки графика ${symbol}/${toSymbol}:`, err);
+    }
+  }
+
+  function refreshCharts() {
+    loadChart('USD', 'RUB', 'usdChart', 'usdChartInstance');
+    loadChart('EUR', 'USD', 'eurChart', 'eurChartInstance');
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('light');
+  }
+
+  updateRates();
+  refreshCharts();
+  setInterval(() => {
+    updateRates();
+    refreshCharts();
+  }, UPDATE_INTERVAL);
 </script>
 
 </body>
 </html>
-
 
