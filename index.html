@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>USD → RUB Chart (currencyapi)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>USD → RUB Chart (TwelveData)</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     body {
       background: #1A1E2B;
@@ -33,7 +32,7 @@
 </head>
 <body>
   <div class="chart-container">
-    <h2>📈 USD → RUB (currencyapi.com)</h2>
+    <h2>📈 USD → RUB (TwelveData API)</h2>
     <select id="range-select" onchange="loadChart()">
       <option value="7">7 дней</option>
       <option value="14">14 дней</option>
@@ -43,80 +42,70 @@
   </div>
 
 <script>
-  const API_KEY = "cur_live_en3UwRMLfAQJgMJZRGufRhzaRQiUnRdcLYjx6WF4"; // замените на свой ключ от https://currencyapi.com
+  const API_KEY = "demo"; // Замените на свой ключ от https://twelvedata.com
 
   async function loadChart() {
     const days = +document.getElementById('range-select').value;
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
+    const interval = "1day";
+    const symbol = "USD/RUB";
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    const dates = [];
-    const values = [];
+    const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${days}&apikey=${API_KEY}`;
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = formatDate(d);
-      try {
-        const res = await fetch(`https://api.currencyapi.com/v3/historical?apikey=${API_KEY}&currencies=RUB&base_currency=USD&date=${dateStr}`);
-        const data = await res.json();
-        const rate = data.data?.[dateStr]?.RUB?.value;
-        console.log(dateStr, rate);
-        if (!rate) continue;
-        dates.push(dateStr);
-        values.push(rate);
-      } catch (e) {
-        console.warn(`Ошибка на ${dateStr}:`, e);
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      console.log(data);
+
+      if (!data || !data.values) {
+        alert("Ошибка загрузки данных. Проверьте API ключ или лимит.");
+        return;
       }
-    }
 
-    if (window.chart) window.chart.destroy();
+      const labels = data.values.map(d => d.datetime).reverse();
+      const values = data.values.map(d => parseFloat(d.close)).reverse();
 
-    window.chart = new Chart(document.getElementById('usdChart'), {
-      type: 'line',
-      data: {
-        labels: dates,
-        datasets: [{
-          label: 'USD → RUB',
-          data: values,
-          borderColor: '#00C853',
-          tension: 0.3,
-          pointRadius: 3,
-          pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          datalabels: {
-            anchor: 'end',
-            align: 'top',
-            color: '#fff',
-            font: { size: 12 },
-            formatter: v => v.toFixed(2)
-          },
-          legend: {
-            labels: { color: '#fff' }
-          },
-          tooltip: { enabled: true }
+      if (window.chart) window.chart.destroy();
+
+      window.chart = new Chart(document.getElementById('usdChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'USD → RUB',
+            data: values,
+            borderColor: '#00C853',
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 6
+          }]
         },
-        scales: {
-          x: {
-            ticks: { color: '#ccc' },
-            title: { display: true, text: 'Дата', color: '#fff' }
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#fff' }
+            },
+            tooltip: { enabled: true }
           },
-          y: {
-            ticks: { color: '#ccc' },
-            title: { display: true, text: 'Курс', color: '#fff' }
+          scales: {
+            x: {
+              ticks: { color: '#ccc' },
+              title: { display: true, text: 'Дата', color: '#fff' }
+            },
+            y: {
+              ticks: { color: '#ccc' },
+              title: { display: true, text: 'Курс', color: '#fff' }
+            }
           }
         }
-      },
-      plugins: [ChartDataLabels]
-    });
+      });
+
+    } catch (err) {
+      console.error("Ошибка загрузки:", err);
+    }
   }
 
   loadChart();
 </script>
 </body>
 </html>
-
