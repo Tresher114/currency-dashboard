@@ -136,53 +136,45 @@
   }
 
   async function loadUsdRubChart(days = 7) {
-    const labels = [];
-    const rates = [];
-    const today = new Date();
-    const apiKey = '97d92fd0b70d4a3e91c82d1bf16894b4';
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days + 1);
 
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(today.getDate() - i);
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      const formattedDate = `${yyyy}-${mm}-${dd}`;
-      labels.push(formattedDate);
+    const format = d => d.toISOString().split('T')[0];
+    const url = `https://api.exchangerate.host/timeseries?start_date=${format(startDate)}&end_date=${format(endDate)}&base=USD&symbols=RUB`;
 
-      try {
-        const res = await fetch(`https://api.twelvedata.com/time_series?symbol=USDRUB&interval=1day&start_date=${formattedDate}&end_date=${formattedDate}&apikey=${apiKey}`);
-        const data = await res.json();
-        if (data && data.values && data.values[0]) {
-          rates.push(parseFloat(data.values[0].close));
-        } else {
-          rates.push(null);
-        }
-      } catch (error) {
-        rates.push(null);
-      }
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const labels = Object.keys(data.rates);
+      const rates = labels.map(date => data.rates[date]?.RUB ?? null);
+
+      new Chart(document.getElementById('usdChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'USD → RUB',
+            data: rates,
+            borderColor: 'limegreen',
+            backgroundColor: 'rgba(0,200,83,0.2)',
+            tension: 0.3,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          plugins: { datalabels: { align: 'top', color: '#fff' } },
+          scales: {
+            y: { title: { display: true, text: 'Курс' } },
+            x: { title: { display: true, text: 'Дата' } }
+          },
+          responsive: true
+        },
+        plugins: [ChartDataLabels]
+      });
+    } catch (error) {
+      console.error('Ошибка загрузки графика USD/RUB:', error);
     }
-
-    new Chart(document.getElementById('usdChart').getContext('2d'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'USD → RUB',
-          data: rates,
-          borderColor: 'limegreen',
-          backgroundColor: 'rgba(0,200,83,0.2)',
-          tension: 0.3,
-          pointRadius: 4
-        }]
-      },
-      options: {
-        plugins: { datalabels: { align: 'top', color: '#fff' } },
-        scales: { y: { title: { display: true, text: 'Курс' } }, x: { title: { display: true, text: 'Дата' } } },
-        responsive: true
-      },
-      plugins: [ChartDataLabels]
-    });
   }
 
   function refreshCharts() {
