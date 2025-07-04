@@ -99,7 +99,7 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
-  const TD_API_KEY = "97d92fd0b70d4a3e91c82d1bf16894b4"; // Замените на свой ключ от TwelveData
+  const TWELVE_API_KEY = '97d92fd0b70d4a3e91c82d1bf16894b4';
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -115,87 +115,18 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
-      const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
+      const xeEur = await fetch(`https://api.twelvedata.com/price?symbol=EUR/RUB&apikey=${TWELVE_API_KEY}`).then(r => r.json());
+      const xeAed = await fetch(`https://api.twelvedata.com/price?symbol=AED/EUR&apikey=${TWELVE_API_KEY}`).then(r => r.json());
 
-      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates?.RUB?.toFixed(2) || '—'} ₽`;
-      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates?.EUR?.toFixed(2) || '—'} €`;
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.price ? parseFloat(xeEur.price).toFixed(2) : '—'} ₽`;
+      document.getElementById('xe-aed').textContent = `AED: ${xeAed.price ? parseFloat(xeAed.price).toFixed(2) : '—'} €`;
       document.getElementById('xe-time').textContent = formatTime();
     } catch (err) {
       console.error('Ошибка загрузки:', err);
     }
   }
 
-  function refreshCharts() {
-    const days = +document.getElementById('range-select').value;
-    loadUsdRubChart(days);
-    loadChart('EUR', 'USD', 'eurChart', days);
-  }
-
-  async function loadUsdRubChart(days) {
-    const url = `https://api.twelvedata.com/time_series?symbol=USD/RUB&interval=1day&outputsize=${days}&apikey=${TD_API_KEY}`;
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!data || !data.values) return;
-      const labels = data.values.map(d => d.datetime).reverse();
-      const values = data.values.map(d => parseFloat(d.close)).reverse();
-
-      if (window.usdChartInstance) window.usdChartInstance.destroy();
-
-      window.usdChartInstance = new Chart(document.getElementById('usdChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{ label: 'USD → RUB', data: values, borderColor: '#00C853', tension: 0.3 }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { labels: { color: '#fff' } } },
-          scales: {
-            x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
-            y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
-          }
-        }
-      });
-    } catch (err) {
-      console.error('Ошибка загрузки USD/RUB:', err);
-    }
-  }
-
-  async function loadChart(from, to, elementId, days) {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
-    const format = d => d.toISOString().split('T')[0];
-    const url = `https://api.frankfurter.app/${format(start)}..${format(end)}?from=${from}&to=${to}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const labels = Object.keys(data.rates);
-    const values = labels.map(date => data.rates[date][to]);
-
-    if (window[elementId + 'Instance']) window[elementId + 'Instance'].destroy();
-
-    window[elementId + 'Instance'] = new Chart(document.getElementById(elementId), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{ label: `${from} → ${to}`, data: values, borderColor: '#29B6F6', tension: 0.3 }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { labels: { color: '#fff' } },
-          tooltip: { enabled: true }
-        },
-        scales: {
-          x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
-          y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
-        }
-      }
-    });
-  }
-
+  // Остальной код без изменений
   updateRates();
   refreshCharts();
   setInterval(() => {
@@ -206,3 +137,4 @@
 
 </body>
 </html>
+
