@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Валютный Дашборд</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     :root {
       --bg: #1A1E2B;
@@ -24,6 +25,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      overflow-x: hidden;
     }
 
     .card {
@@ -43,14 +45,12 @@
       font-weight: bold;
     }
 
-    .loading {
-      color: var(--muted);
-    }
+    .loading { color: var(--muted); }
 
     select {
       font-size: 1.5vw;
       padding: 0.5em;
-      margin: 1em 0;
+      margin-bottom: 1em;
       border-radius: 0.5em;
     }
 
@@ -63,42 +63,43 @@
 </head>
 <body>
 
-  <div class="card">
-    <h2>🏦 Центробанк РФ</h2>
-    <div id="cbr-usd" class="rate loading">Загрузка...</div>
-    <div id="cbr-eur" class="rate loading">Загрузка...</div>
-    <div id="cbr-cny" class="rate loading">Загрузка...</div>
-    <div id="cbr-rub" class="rate loading">Загрузка...</div>
-    <div>Обновлено: <span id="cbr-time">–</span></div>
-  </div>
+<div class="card">
+  <h2>🏦 Центробанк РФ</h2>
+  <div id="cbr-usd" class="rate loading">Загрузка...</div>
+  <div id="cbr-eur" class="rate loading">Загрузка...</div>
+  <div id="cbr-cny" class="rate loading">Загрузка...</div>
+  <div id="cbr-rub" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="cbr-time">–</span></div>
+</div>
 
-  <div class="card">
-    <h2>🌐 XE.com</h2>
-    <div id="xe-eur" class="rate loading">Загрузка...</div>
-    <div id="xe-aed" class="rate loading">Загрузка...</div>
-    <div>Обновлено: <span id="xe-time">–</span></div>
-  </div>
+<div class="card">
+  <h2>🌐 XE.com</h2>
+  <div id="xe-eur" class="rate loading">Загрузка...</div>
+  <div id="xe-aed" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="xe-time">–</span></div>
+</div>
 
-  <div class="card">
-    <h2>📉 Profinanse</h2>
-    <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
-    <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
-  </div>
+<div class="card">
+  <h2>📉 Profinanse</h2>
+  <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
+  <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
+</div>
 
-  <div class="card">
-    <h2>📊 USD/RUB</h2>
-    <select id="range-select" onchange="refreshCharts()">
-      <option value="7">7 дней</option>
-      <option value="14">14 дней</option>
-      <option value="30">30 дней</option>
-    </select>
-    <canvas id="usdChart"></canvas>
-    <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
-    <canvas id="eurChart"></canvas>
-  </div>
+<div class="card">
+  <h2>📊 USD/RUB</h2>
+  <select id="range-select" onchange="refreshCharts()">
+    <option value="7">7 дней</option>
+    <option value="14">14 дней</option>
+    <option value="30">30 дней</option>
+  </select>
+  <canvas id="usdChart"></canvas>
+  <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
+  <canvas id="eurChart"></canvas>
+</div>
 
 <script>
   const UPDATE_INTERVAL = 30000;
+  const XE_API_KEY = "70ae1163ce4a925c7230c499";
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -108,18 +109,20 @@
     try {
       const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
       const cbr = await cbrRes.json();
-
       document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
-      const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
+      const xeEur = await fetch(`https://v6.exchangerate-api.com/v6/${XE_API_KEY}/latest/EUR`).then(r => r.json());
+      const xeAed = await fetch(`https://v6.exchangerate-api.com/v6/${XE_API_KEY}/latest/AED`).then(r => r.json());
 
-      const xeEurRate = xeEur?.rates?.RUB;
-      const xeAedRate = xeAed?.rates?.EUR;
+      console.log("XE EUR Response:", xeEur);
+      console.log("XE AED Response:", xeAed);
+
+      const xeEurRate = xeEur?.conversion_rates?.RUB;
+      const xeAedRate = xeAed?.conversion_rates?.EUR;
 
       if (typeof xeEurRate === "number") {
         document.getElementById('xe-eur').textContent = `EUR: ${xeEurRate.toFixed(2)} ₽`;
@@ -139,105 +142,7 @@
     }
   }
 
-  async function loadUsdRubChart() {
-    const ctx = document.getElementById('usdChart').getContext('2d');
-    const days = parseInt(document.getElementById('range-select').value);
-    const today = new Date();
-    const end = today.toISOString().split('T')[0];
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - days);
-    const start = startDate.toISOString().split('T')[0];
-
-    try {
-      const res = await fetch(`https://api.exchangerate.host/timeseries?start_date=${start}&end_date=${end}&base=USD&symbols=RUB`);
-      const data = await res.json();
-
-      const labels = Object.keys(data.rates);
-      const values = labels.map(date => data.rates[date].RUB);
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'USD → RUB',
-            data: values,
-            borderColor: '#00C853',
-            tension: 0.3,
-            pointRadius: 3,
-            fill: false
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { display: true }
-          },
-          scales: {
-            y: {
-              beginAtZero: false
-            }
-          }
-        }
-      });
-    } catch (err) {
-      console.error("USD/RUB ошибка:", err);
-    }
-  }
-
-  async function loadEurUsdChart() {
-    const ctx = document.getElementById('eurChart').getContext('2d');
-    const today = new Date();
-    const end = today.toISOString().split('T')[0];
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - 7);
-    const start = startDate.toISOString().split('T')[0];
-
-    try {
-      const res = await fetch(`https://api.exchangerate.host/timeseries?start_date=${start}&end_date=${end}&base=EUR&symbols=USD`);
-      const data = await res.json();
-
-      const labels = Object.keys(data.rates);
-      const values = labels.map(date => data.rates[date].USD);
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'EUR → USD',
-            data: values,
-            borderColor: '#00B0FF',
-            tension: 0.3,
-            pointRadius: 3,
-            fill: false
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { display: true }
-          },
-          scales: {
-            y: {
-              beginAtZero: false
-            }
-          }
-        }
-      });
-    } catch (err) {
-      console.error("EUR/USD ошибка:", err);
-    }
-  }
-
-  function refreshCharts() {
-    loadUsdRubChart();
-    loadEurUsdChart();
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    updateRates();
-    refreshCharts();
-    setInterval(updateRates, UPDATE_INTERVAL);
-  });
+  updateRates();
 </script>
 
 </body>
