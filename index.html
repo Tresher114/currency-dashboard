@@ -98,8 +98,9 @@
 </div>
 
 <script>
-  const UPDATE_INTERVAL = 30000;
-  const ALPHA_VANTAGE_KEY = 'TNMNHXGL49OQCP2K'; // замените на ваш ключ
+  const UPDATE_INTERVAL = 60000; // 1 минута
+  const TWELVE_DATA_API_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
+
   let usdChartInstance = null;
   let eurChartInstance = null;
 
@@ -130,13 +131,12 @@
 
   async function loadChart(symbol, toSymbol, canvasId, chartRef) {
     try {
-      const res = await fetch(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${symbol}&to_symbol=${toSymbol}&apikey=${ALPHA_VANTAGE_KEY}`);
+      const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}/${toSymbol}&interval=1day&apikey=${TWELVE_DATA_API_KEY}&outputsize=30`);
       const data = await res.json();
-      const times = data['Time Series FX (Daily)'];
-      if (!times) throw new Error('Данные не найдены');
+      if (!data?.values) throw new Error('Данные не найдены');
 
-      const labels = Object.keys(times).slice(0, 30).reverse();
-      const rates = labels.map(date => parseFloat(times[date]['4. close']));
+      const labels = data.values.map(v => v.datetime).reverse();
+      const rates = data.values.map(v => parseFloat(v.close)).reverse();
 
       if (window[chartRef]) window[chartRef].destroy();
 
@@ -181,9 +181,11 @@
   }
 
   updateRates();
-  setInterval(updateRates, UPDATE_INTERVAL);
   refreshCharts();
+  setInterval(updateRates, UPDATE_INTERVAL);
+  setInterval(refreshCharts, UPDATE_INTERVAL);
 </script>
 
 </body>
 </html>
+
