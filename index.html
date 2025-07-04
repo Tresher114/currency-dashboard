@@ -99,6 +99,7 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
+  const ALPHA_API_KEY = 'IVTXEK30O075V4U2';
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -136,45 +137,38 @@
   }
 
   async function loadUsdRubChart(days = 7) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days + 1);
+    const res = await fetch(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=RUB&apikey=${ALPHA_API_KEY}`);
+    const data = await res.json();
 
-    const format = d => d.toISOString().split('T')[0];
-    const url = `https://api.exchangerate.host/timeseries?start_date=${format(startDate)}&end_date=${format(endDate)}&base=USD&symbols=RUB`;
-
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const labels = Object.keys(data.rates);
-      const rates = labels.map(date => data.rates[date]?.RUB ?? null);
-
-      new Chart(document.getElementById('usdChart').getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'USD → RUB',
-            data: rates,
-            borderColor: 'limegreen',
-            backgroundColor: 'rgba(0,200,83,0.2)',
-            tension: 0.3,
-            pointRadius: 4
-          }]
-        },
-        options: {
-          plugins: { datalabels: { align: 'top', color: '#fff' } },
-          scales: {
-            y: { title: { display: true, text: 'Курс' } },
-            x: { title: { display: true, text: 'Дата' } }
-          },
-          responsive: true
-        },
-        plugins: [ChartDataLabels]
-      });
-    } catch (error) {
-      console.error('Ошибка загрузки графика USD/RUB:', error);
+    if (!data['Time Series FX (Daily)']) {
+      console.error('Ошибка загрузки графика USD/RUB');
+      return;
     }
+
+    const allDates = Object.keys(data['Time Series FX (Daily)']).sort().reverse();
+    const labels = allDates.slice(0, days).reverse();
+    const rates = labels.map(date => parseFloat(data['Time Series FX (Daily)'][date]['4. close']));
+
+    new Chart(document.getElementById('usdChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'USD → RUB',
+          data: rates,
+          borderColor: 'limegreen',
+          backgroundColor: 'rgba(0,200,83,0.2)',
+          tension: 0.3,
+          pointRadius: 4
+        }]
+      },
+      options: {
+        plugins: { datalabels: { align: 'top', color: '#fff' } },
+        scales: { y: { title: { display: true, text: 'Курс' } }, x: { title: { display: true, text: 'Дата' } } },
+        responsive: true
+      },
+      plugins: [ChartDataLabels]
+    });
   }
 
   function refreshCharts() {
@@ -189,3 +183,4 @@
 
 </body>
 </html>
+
