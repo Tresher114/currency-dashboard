@@ -140,6 +140,37 @@
     console.error('Ошибка загрузки:', err);
   }
 } ₽`;
+    document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
+    document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
+    document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
+    document.getElementById('cbr-time').textContent = formatTime();
+
+    const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
+    const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
+
+    console.log("XE EUR Response:", xeEur);
+    console.log("XE AED Response:", xeAed);
+
+    const xeEurRate = xeEur?.rates?.RUB;
+    const xeAedRate = xeAed?.rates?.EUR;
+
+    if (typeof xeEurRate === "number") {
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEurRate.toFixed(2)} ₽`;
+    } else {
+      document.getElementById('xe-eur').textContent = 'EUR: —';
+    }
+
+    if (typeof xeAedRate === "number") {
+      document.getElementById('xe-aed').textContent = `AED: ${xeAedRate.toFixed(2)} €`;
+    } else {
+      document.getElementById('xe-aed').textContent = 'AED: —';
+    }
+
+    document.getElementById('xe-time').textContent = formatTime();
+  } catch (err) {
+    console.error('Ошибка загрузки:', err);
+  }
+} ₽`;
       document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
@@ -171,4 +202,3 @@
 
 </body>
 </html>
-
