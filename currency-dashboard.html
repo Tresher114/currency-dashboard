@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Валютный Дашборд</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <style>
+    :root {
+      --bg: #1A1E2B;
+      --card: #2D3243;
+      --text: #ffffff;
+      --accent: #00C853;
+      --muted: #8C92A4;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: sans-serif;
+      font-size: 2vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 1em;
+      padding: 2em;
+      margin: 1em;
+      width: 90vw;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+
+    .rate {
+      font-size: 3vw;
+      margin: 0.5em 0;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .loading { color: var(--muted); }
+
+    select {
+      font-size: 1.5vw;
+      padding: 0.5em;
+      margin-bottom: 1em;
+      border-radius: 0.5em;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 60vh;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>🏦 Центробанк РФ</h2>
+  <div id="cbr-usd" class="rate loading">Загрузка...</div>
+  <div id="cbr-eur" class="rate loading">Загрузка...</div>
+  <div id="cbr-cny" class="rate loading">Загрузка...</div>
+  <div id="cbr-rub" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="cbr-time">–</span></div>
+</div>
+
+<div class="card">
+  <h2>🌐 XE.com</h2>
+  <div id="xe-eur" class="rate loading">Загрузка...</div>
+  <div id="xe-aed" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="xe-time">–</span></div>
+</div>
+
+<div class="card">
+  <h2>📉 Profinanse</h2>
+  <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
+  <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
+</div>
+
+<div class="card">
+  <h2>📊 USD/RUB</h2>
+  <select id="range-select" onchange="refreshCharts()">
+    <option value="7">7 дней</option>
+    <option value="14">14 дней</option>
+    <option value="30">30 дней</option>
+  </select>
+  <canvas id="usdChart"></canvas>
+  <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
+  <canvas id="eurChart"></canvas>
+</div>
+
+<script>
+  const UPDATE_INTERVAL = 30000;
+
+  function formatTime(date = new Date()) {
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function updateRates() {
+    try {
+      const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+      const cbr = await cbrRes.json();
+      document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
+      document.getElementById('cbr-time').textContent = formatTime();
+
+      const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
+      const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
+
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates?.RUB?.toFixed(2) || '—'} ₽`;
+      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates?.EUR?.toFixed(2) || '—'} €`;
+      document.getElementById('xe-time').textContent = formatTime();
+    } catch (err) {
+      console.error('Ошибка загрузки:', err);
+    }
+  }
+
+  function formatDate(d) {
+    return d.toISOString().split('T')[0];
+  }
+
+  function refreshCharts() {
+    const days = +document.getElementById('range-select').value;
+    loadUsdRubChart(days);
+    loadChart('EUR', 'USD', 'eurChart', days);
+  }
+
+  async function loadUsdRubChart(days) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    const url = `https://api.exchangerate.host/timeseries?start_date=${formatDate(start)}&end_date=${formatDate(end)}&base=USD&symbols=RUB`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.success || !data.rates) {
+        console.warn('Пустой ответ от exchangerate.host');
+        return;
+      }
+
+      const labels = Object.keys(data.rates);
+      const values = labels.map(date => data.rates[date]?.RUB);
+
+      if (window.usdChartInstance) window.usdChartInstance.destroy();
+
+      window.usdChartInstance = new Chart(document.getElementById('usdChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'USD → RUB',
+            data: values,
+            borderColor: '#00C853',
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#fff',
+              font: { size: 14 },
+              formatter: v => v?.toFixed(2)
+            },
+            legend: { labels: { color: '#fff', font: { size: 16 } } },
+            tooltip: { enabled: false }
+          },
+          scales: {
+            x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
+            y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки USD/RUB:', err);
+    }
+  }
+
+  async function loadChart(from, to, elementId, days) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    const url = `https://api.frankfurter.app/${formatDate(start)}..${formatDate(end)}?from=${from}&to=${to}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const labels = Object.keys(data.rates);
+    const values = labels.map(date => data.rates[date][to]);
+
+    if (window[elementId + 'Instance']) window[elementId + 'Instance'].destroy();
+
+    window[elementId + 'Instance'] = new Chart(document.getElementById(elementId), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: `${from} → ${to}`,
+          data: values,
+          borderColor: '#29B6F6',
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            color: '#fff',
+            font: { size: 14 },
+            formatter: val => val.toFixed(4)
+          },
+          legend: {
+            labels: {
+              color: '#fff',
+              font: { size: 16 }
+            }
+          },
+          tooltip: {
+            enabled: false
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#ccc' },
+            title: { display: true, text: 'Дата', color: '#fff' }
+          },
+          y: {
+            ticks: { color: '#ccc' },
+            title: { display: true, text: 'Курс', color: '#fff' }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  }
+
+  updateRates();
+  refreshCharts();
+  setInterval(() => {
+    updateRates();
+    refreshCharts();
+  }, UPDATE_INTERVAL);
+</script>
+
+</body>
+</html>
