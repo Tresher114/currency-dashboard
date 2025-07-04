@@ -3,99 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Валютный Дашборд</title>
+  <title>USD → RUB Chart</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
-    :root {
-      --bg: #1A1E2B;
-      --card: #2D3243;
-      --text: #ffffff;
-      --accent: #00C853;
-      --muted: #8C92A4;
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
+    body {
+      background: #1A1E2B;
+      color: #fff;
       font-family: sans-serif;
-      font-size: 2vw;
       display: flex;
       flex-direction: column;
       align-items: center;
-      overflow-x: hidden;
+      padding: 2rem;
     }
-
-    .card {
-      background: var(--card);
-      border-radius: 1em;
-      padding: 2em;
-      margin: 1em;
-      width: 90vw;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
-      text-align: center;
+    .chart-container {
+      width: 90%;
+      max-width: 1200px;
+      background: #2D3243;
+      padding: 2rem;
+      border-radius: 1rem;
     }
-
-    .rate {
-      font-size: 3vw;
-      margin: 0.5em 0;
-      color: var(--accent);
-      font-weight: bold;
-    }
-
-    .loading { color: var(--muted); }
-
     select {
-      font-size: 1.5vw;
+      font-size: 1rem;
       padding: 0.5em;
       margin-bottom: 1em;
       border-radius: 0.5em;
     }
-
-    canvas {
-      width: 100% !important;
-      height: auto !important;
-      max-height: 60vh;
-    }
   </style>
 </head>
 <body>
-
-<!-- ... другие блоки интерфейса ... -->
+  <div class="chart-container">
+    <h2>📈 USD → RUB</h2>
+    <select id="range-select" onchange="loadChart()">
+      <option value="7">7 дней</option>
+      <option value="14">14 дней</option>
+      <option value="30">30 дней</option>
+    </select>
+    <canvas id="usdChart"></canvas>
+  </div>
 
 <script>
-  async function loadUsdRubChart(days) {
+  async function loadChart() {
+    const days = +document.getElementById('range-select').value;
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
 
+    const formatDate = (d) => d.toISOString().split('T')[0];
     const dates = [];
     const values = [];
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      const url = `https://api.exchangerate.host/convert?from=USD&to=RUB&date=${dateStr}`;
+      const dateStr = formatDate(d);
       try {
-        const res = await fetch(url);
+        const res = await fetch(`https://api.exchangerate.host/convert?from=USD&to=RUB&date=${dateStr}`);
         const data = await res.json();
-
-        if (!data || typeof data.result !== 'number') {
-          console.warn(`Нет данных за ${dateStr}`);
-          continue;
-        }
-
+        console.log(`🧪 ${dateStr}:`, data);
+        if (!data || typeof data.result !== 'number' || data.result === 0) continue;
         dates.push(dateStr);
         values.push(data.result);
       } catch (e) {
-        console.warn(`Ошибка запроса за ${dateStr}:`, e);
+        console.warn(`Ошибка на ${dateStr}:`, e);
       }
     }
 
-    if (window.usdChartInstance) window.usdChartInstance.destroy();
+    if (window.chart) window.chart.destroy();
 
-    window.usdChartInstance = new Chart(document.getElementById('usdChart'), {
+    window.chart = new Chart(document.getElementById('usdChart'), {
       type: 'line',
       data: {
         labels: dates,
@@ -104,7 +78,7 @@
           data: values,
           borderColor: '#00C853',
           tension: 0.3,
-          pointRadius: 4,
+          pointRadius: 3,
           pointHoverRadius: 6
         }]
       },
@@ -115,23 +89,30 @@
             anchor: 'end',
             align: 'top',
             color: '#fff',
-            font: { size: 14 },
-            formatter: v => v?.toFixed(2)
+            font: { size: 12 },
+            formatter: v => v.toFixed(2)
           },
-          legend: { labels: { color: '#fff', font: { size: 16 } } },
-          tooltip: { enabled: false }
+          legend: {
+            labels: { color: '#fff' }
+          },
+          tooltip: { enabled: true }
         },
         scales: {
-          x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
-          y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
+          x: {
+            ticks: { color: '#ccc' },
+            title: { display: true, text: 'Дата', color: '#fff' }
+          },
+          y: {
+            ticks: { color: '#ccc' },
+            title: { display: true, text: 'Курс', color: '#fff' }
+          }
         }
       },
       plugins: [ChartDataLabels]
     });
   }
+
+  loadChart();
 </script>
-
-<!-- ... остальные скрипты и вызовы функций ... -->
-
 </body>
 </html>
