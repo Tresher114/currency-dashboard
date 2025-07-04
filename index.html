@@ -114,11 +114,11 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
-      const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
+      const xeEur = await fetch('https://api.exchangerate.host/convert?from=EUR&to=RUB').then(r => r.json());
+      const xeAed = await fetch('https://api.exchangerate.host/convert?from=AED&to=EUR').then(r => r.json());
 
-      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates?.RUB?.toFixed(2) || '—'} ₽`;
-      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates?.EUR?.toFixed(2) || '—'} €`;
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.result?.toFixed(2) || '—'} ₽`;
+      document.getElementById('xe-aed').textContent = `AED: ${xeAed.result?.toFixed(2) || '—'} €`;
       document.getElementById('xe-time').textContent = formatTime();
     } catch (err) {
       console.error('Ошибка загрузки:', err);
@@ -139,58 +139,60 @@
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
-    const url = `https://api.exchangerate.host/timeseries?start_date=${formatDate(start)}&end_date=${formatDate(end)}&base=USD&symbols=RUB`;
 
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
+    const dates = [];
+    const values = [];
 
-      if (!data.success || !data.rates) {
-        console.warn('Пустой ответ от exchangerate.host');
-        return;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = formatDate(d);
+      const url = `https://api.exchangerate.host/convert?from=USD&to=RUB&date=${dateStr}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.result) {
+          dates.push(dateStr);
+          values.push(data.result);
+        }
+      } catch (e) {
+        console.warn(`Ошибка на дате ${dateStr}`);
       }
-
-      const labels = Object.keys(data.rates);
-      const values = labels.map(date => data.rates[date]?.RUB);
-
-      if (window.usdChartInstance) window.usdChartInstance.destroy();
-
-      window.usdChartInstance = new Chart(document.getElementById('usdChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'USD → RUB',
-            data: values,
-            borderColor: '#00C853',
-            tension: 0.3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            datalabels: {
-              anchor: 'end',
-              align: 'top',
-              color: '#fff',
-              font: { size: 14 },
-              formatter: v => v?.toFixed(2)
-            },
-            legend: { labels: { color: '#fff', font: { size: 16 } } },
-            tooltip: { enabled: false }
-          },
-          scales: {
-            x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
-            y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
-          }
-        },
-        plugins: [ChartDataLabels]
-      });
-    } catch (err) {
-      console.error('Ошибка загрузки USD/RUB:', err);
     }
+
+    if (window.usdChartInstance) window.usdChartInstance.destroy();
+
+    window.usdChartInstance = new Chart(document.getElementById('usdChart'), {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'USD → RUB',
+          data: values,
+          borderColor: '#00C853',
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            color: '#fff',
+            font: { size: 14 },
+            formatter: v => v?.toFixed(2)
+          },
+          legend: { labels: { color: '#fff', font: { size: 16 } } },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: { ticks: { color: '#ccc' }, title: { display: true, text: 'Дата', color: '#fff' } },
+          y: { ticks: { color: '#ccc' }, title: { display: true, text: 'Курс', color: '#fff' } }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
   }
 
   async function loadChart(from, to, elementId, days) {
