@@ -29,28 +29,33 @@
       background: var(--bg);
       color: var(--text);
       font-family: sans-serif;
-      font-size: 1.5vw;
+      font-size: 1.2vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1vw;
-      justify-content: center;
-      align-items: start;
-      overflow: hidden;
-      height: 100vh;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5em;
+      width: 95vw;
+      max-width: 1800px;
+      margin-top: 1em;
     }
 
     .card {
       background: var(--card);
       border-radius: 1em;
       padding: 1.5em;
-      margin: 0.5em;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       text-align: center;
     }
 
     .rate {
       font-size: 2vw;
-      margin: 0.3em 0;
+      margin: 0.5em 0;
       color: var(--accent);
       font-weight: bold;
     }
@@ -60,62 +65,61 @@
     canvas {
       width: 100% !important;
       height: auto !important;
-      max-height: 28vh;
+      max-height: 40vh;
     }
 
     .controls {
-      grid-column: span 3;
       display: flex;
-      gap: 2em;
       justify-content: center;
       align-items: center;
-      margin: 1em auto;
+      gap: 1em;
+      margin: 1em;
+      flex-wrap: wrap;
     }
 
     select, button {
       font-size: 1.2vw;
-      padding: 0.6em 1.2em;
+      padding: 0.5em 1em;
       border-radius: 0.5em;
       cursor: pointer;
-    }
-
-    h2 {
-      font-size: 2.2vw;
     }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>🏦 Центробанк РФ</h2>
-  <div id="cbr-usd" class="rate loading">Загрузка...</div>
-  <div id="cbr-eur" class="rate loading">Загрузка...</div>
-  <div id="cbr-cny" class="rate loading">Загрузка...</div>
-  <div id="cbr-rub" class="rate loading">Загрузка...</div>
-  <div>Обновлено: <span id="cbr-time">–</span></div>
+<div class="grid">
+  <div class="card">
+    <h2>🏦 Центробанк РФ</h2>
+    <div id="cbr-usd" class="rate loading">Загрузка...</div>
+    <div id="cbr-eur" class="rate loading">Загрузка...</div>
+    <div id="cbr-cny" class="rate loading">Загрузка...</div>
+    <div id="cbr-rub" class="rate loading">Загрузка...</div>
+    <div>Обновлено: <span id="cbr-time">–</span></div>
+  </div>
+
+  <div class="card">
+    <h2>🌐 XE.com</h2>
+    <div id="xe-eur" class="rate loading">Загрузка...</div>
+    <div id="xe-aed" class="rate loading">Загрузка...</div>
+    <div>Обновлено: <span id="xe-time">–</span></div>
+  </div>
+
+  <div class="card">
+    <h2>📉 Profinanse</h2>
+    <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
+    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanse.ru</div>
+  </div>
 </div>
 
-<div class="card">
-  <h2>🌐 XE.com</h2>
-  <div id="xe-eur" class="rate loading">Загрузка...</div>
-  <div id="xe-aed" class="rate loading">Загрузка...</div>
-  <div>Обновлено: <span id="xe-time">–</span></div>
-</div>
-
-<div class="card">
-  <h2>📉 Profinanse</h2>
-  <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
-  <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
-</div>
-
-<div class="card">
-  <h2>📊 USD/RUB</h2>
-  <canvas id="usdChart"></canvas>
-</div>
-
-<div class="card">
-  <h2>📊 EUR/USD</h2>
-  <canvas id="eurChart"></canvas>
+<div class="grid">
+  <div class="card">
+    <h2>📊 USD/RUB</h2>
+    <canvas id="usdChart"></canvas>
+  </div>
+  <div class="card">
+    <h2>📊 EUR/USD</h2>
+    <canvas id="eurChart"></canvas>
+  </div>
 </div>
 
 <div class="card controls">
@@ -131,8 +135,6 @@
 <script>
   const UPDATE_INTERVAL = 60000;
   const TWELVE_DATA_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
-  let usdChartInstance = null;
-  let eurChartInstance = null;
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -194,24 +196,14 @@
             datalabels: {
               align: 'top',
               color: '#fff',
-              formatter: v => v.toFixed(2),
-              font: {
-                size: 14
-              }
+              formatter: v => v.toFixed(2)
             }
           },
           scales: {
-            y: {
-              title: { display: true, text: 'Курс', font: { size: 16 } },
-              ticks: { font: { size: 14 } }
-            },
-            x: {
-              title: { display: true, text: 'Дата', font: { size: 16 } },
-              ticks: { font: { size: 12 } }
-            }
+            y: { title: { display: true, text: 'Курс' } },
+            x: { title: { display: true, text: 'Дата' } }
           },
-          responsive: true,
-          maintainAspectRatio: false
+          responsive: true
         },
         plugins: [ChartDataLabels]
       });
@@ -229,16 +221,6 @@
     document.body.classList.toggle('light');
   }
 
-  async function requestFullscreen() {
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      }
-    } catch (e) {
-      console.warn('Fullscreen API error:', e);
-    }
-  }
-
   updateRates();
   refreshCharts();
   setInterval(() => {
@@ -246,13 +228,15 @@
     refreshCharts();
   }, UPDATE_INTERVAL);
 
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      requestFullscreen();
-    }, 500);
+  // Полноэкранный режим при загрузке
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    }
   });
 </script>
 
 </body>
 </html>
+
 
