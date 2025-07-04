@@ -114,8 +114,8 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RUB').then(r => r.json());
-      const xeAed = await fetch('https://api.frankfurter.app/latest?from=AED&to=EUR').then(r => r.json());
+      const xeEur = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=RUB').then(r => r.json());
+      const xeAed = await fetch('https://api.exchangerate.host/latest?base=AED&symbols=EUR').then(r => r.json());
 
       document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
       document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
@@ -127,6 +127,9 @@
 
   updateRates();
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
