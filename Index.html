@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Валютный Дашборд</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <style>
+    :root {
+      --bg: #1A1E2B;
+      --card: #2D3243;
+      --text: #ffffff;
+      --accent: #00C853;
+      --muted: #8C92A4;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: sans-serif;
+      font-size: 2vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 1em;
+      padding: 2em;
+      margin: 1em;
+      width: 90vw;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+
+    .rate {
+      font-size: 3vw;
+      margin: 0.5em 0;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .loading { color: var(--muted); }
+
+    select {
+      font-size: 1.5vw;
+      padding: 0.5em;
+      margin-bottom: 1em;
+      border-radius: 0.5em;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 60vh;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>🏦 Центробанк РФ</h2>
+  <div id="cbr-usd" class="rate loading">Загрузка...</div>
+  <div id="cbr-eur" class="rate loading">Загрузка...</div>
+  <div id="cbr-cny" class="rate loading">Загрузка...</div>
+  <div id="cbr-rub" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="cbr-time">–</span></div>
+</div>
+
+<div class="card">
+  <h2>🌐 XE.com</h2>
+  <div id="xe-eur" class="rate loading">Загрузка...</div>
+  <div id="xe-aed" class="rate loading">Загрузка...</div>
+  <div>Обновлено: <span id="xe-time">–</span></div>
+</div>
+
+<div class="card">
+  <h2>📉 Profinanse</h2>
+  <div id="profinanse-usd" class="rate">≈ 91.37 ₽</div>
+  <div style="color: var(--muted); font-size: 1.2vw;">Источник: profinanse.ru</div>
+</div>
+
+<div class="card">
+  <h2>📊 USD/RUB</h2>
+  <select id="range-select" onchange="refreshCharts()">
+    <option value="7">7 дней</option>
+    <option value="14">14 дней</option>
+    <option value="30">30 дней</option>
+  </select>
+  <canvas id="usdChart"></canvas>
+  <h2 style="margin-top: 1em;">📊 EUR/USD</h2>
+  <canvas id="eurChart"></canvas>
+</div>
+
+<script>
+  const UPDATE_INTERVAL = 30000;
+
+  function formatTime(date = new Date()) {
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function updateRates() {
+    try {
+      const cbrRes = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+      const cbr = await cbrRes.json();
+      document.getElementById('cbr-usd').textContent = `USD: ${cbr.Valute.USD.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-eur').textContent = `EUR: ${cbr.Valute.EUR.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-cny').textContent = `CNY: ${cbr.Valute.CNY.Value.toFixed(2)} ₽`;
+      document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
+      document.getElementById('cbr-time').textContent = formatTime();
+
+      const xeEur = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RUB').then(r => r.json());
+      const xeAed = await fetch('https://api.frankfurter.app/latest?from=AED&to=EUR').then(r => r.json());
+
+      console.log("XE EUR Response:", xeEur);
+      console.log("XE AED Response:", xeAed);
+
+      const xeEurRate = xeEur.rates?.RUB;
+      const xeAedRate = xeAed.rates?.EUR;
+
+      if (typeof xeEurRate === "number") {
+        document.getElementById('xe-eur').textContent = `EUR: ${xeEurRate.toFixed(2)} ₽`;
+      } else {
+        document.getElementById('xe-eur').textContent = 'EUR: —';
+      }
+
+      if (typeof xeAedRate === "number") {
+        document.getElementById('xe-aed').textContent = `AED: ${xeAedRate.toFixed(2)} €`;
+      } else {
+        document.getElementById('xe-aed').textContent = 'AED: —';
+      }
+
+      document.getElementById('xe-time').textContent = formatTime();
+    } catch (err) {
+      console.error('Ошибка загрузки:', err);
+    }
+  }
+
+  updateRates();
+</script>
+
+</body>
+</html>
