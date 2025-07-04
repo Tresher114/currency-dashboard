@@ -99,7 +99,6 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
-  const XE_API_KEY = "70ae1163ce4a925c7230c499";
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -115,23 +114,17 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch(`https://v6.exchangerate-api.com/v6/${XE_API_KEY}/latest/EUR`).then(r => r.json());
-      const xeAed = await fetch(`https://v6.exchangerate-api.com/v6/${XE_API_KEY}/latest/AED`).then(r => r.json());
+      const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
+      const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
 
-      console.log("XE EUR Response:", xeEur);
-      console.log("XE AED Response:", xeAed);
-
-      const xeEurRate = xeEur?.conversion_rates?.RUB;
-      const xeAedRate = xeAed?.conversion_rates?.EUR;
-
-      if (typeof xeEurRate === "number") {
-        document.getElementById('xe-eur').textContent = `EUR: ${xeEurRate.toFixed(2)} ₽`;
+      if (xeEur && xeEur.rates && xeEur.rates.RUB) {
+        document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
       } else {
         document.getElementById('xe-eur').textContent = 'EUR: —';
       }
 
-      if (typeof xeAedRate === "number") {
-        document.getElementById('xe-aed').textContent = `AED: ${xeAedRate.toFixed(2)} €`;
+      if (xeAed && xeAed.rates && xeAed.rates.EUR) {
+        document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
       } else {
         document.getElementById('xe-aed').textContent = 'AED: —';
       }
@@ -143,8 +136,8 @@
   }
 
   updateRates();
+  setInterval(updateRates, UPDATE_INTERVAL);
 </script>
 
 </body>
 </html>
-
