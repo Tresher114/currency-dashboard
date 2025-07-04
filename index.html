@@ -126,7 +126,7 @@
     <h2>📉 Profinanse & GOLD</h2>
     <div id="profinanse-usd" class="rate loading">Загрузка...</div>
     <div id="gold-usd" class="rate loading">Загрузка...</div>
-    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanse.net</div>
+    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanсe.кг</div>
   </div>
 
   <div class="chart-row">
@@ -168,12 +168,12 @@
       document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
       document.getElementById('xe-time').textContent = new Date().toLocaleTimeString();
 
-      const profRes = await fetch('https://api.allorigins.win/raw?url=https://profinanse.ru/usd');
+      const profRes = await fetch('https://api.allorigins.win/raw?url=https://profinance.ru/usd');
       const profText = await profRes.text();
       const match = profText.match(/\d+(\.\d+)?/);
       if (match) document.getElementById('profinanse-usd').textContent = `≈ ${match[0]} ₽`;
 
-      const goldRes = await fetch('https://api.allorigins.win/raw?url=https://profinanse.ru/gold');
+      const goldRes = await fetch('https://api.allorigins.win/raw?url=https://profinance.ru/gold');
       const goldText = await goldRes.text();
       const gmatch = goldText.match(/\d+(\.\d+)?/);
       if (gmatch) document.getElementById('gold-usd').textContent = `GOLD: ${gmatch[0]} $`;
