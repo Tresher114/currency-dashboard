@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>USD → RUB Chart</title>
+  <title>USD → RUB Chart (currencyapi)</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
@@ -33,7 +33,7 @@
 </head>
 <body>
   <div class="chart-container">
-    <h2>📈 USD → RUB</h2>
+    <h2>📈 USD → RUB (currencyapi.com)</h2>
     <select id="range-select" onchange="loadChart()">
       <option value="7">7 дней</option>
       <option value="14">14 дней</option>
@@ -43,6 +43,8 @@
   </div>
 
 <script>
+  const API_KEY = "cur_live_en3UwRMLfAQJgMJZRGufRhzaRQiUnRdcLYjx6WF4"; // замените на свой ключ от https://currencyapi.com
+
   async function loadChart() {
     const days = +document.getElementById('range-select').value;
     const end = new Date();
@@ -56,12 +58,13 @@
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = formatDate(d);
       try {
-        const res = await fetch(`https://api.exchangerate.host/convert?from=USD&to=RUB&date=${dateStr}`);
+        const res = await fetch(`https://api.currencyapi.com/v3/historical?apikey=${API_KEY}&currencies=RUB&base_currency=USD&date=${dateStr}`);
         const data = await res.json();
-        console.log(`🧪 ${dateStr}:`, data);
-        if (!data || typeof data.result !== 'number' || data.result === 0) continue;
+        const rate = data.data?.[dateStr]?.RUB?.value;
+        console.log(dateStr, rate);
+        if (!rate) continue;
         dates.push(dateStr);
-        values.push(data.result);
+        values.push(rate);
       } catch (e) {
         console.warn(`Ошибка на ${dateStr}:`, e);
       }
@@ -116,3 +119,4 @@
 </script>
 </body>
 </html>
+
