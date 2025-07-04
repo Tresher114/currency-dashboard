@@ -99,9 +99,9 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
-  let usdChartInstance;
-  let eurChartInstance;
-  const ALPHA_VANTAGE_API_KEY = 'IVTXEK30O075V4U2'; // замените на ваш ключ
+  const ALPHA_VANTAGE_KEY = 'IVTXEK30O075V4U2'; // замените на ваш ключ
+  let usdChartInstance = null;
+  let eurChartInstance = null;
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -120,49 +120,35 @@
       const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
       const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
 
-      if (xeEur && xeEur.rates && xeEur.rates.RUB) {
-        document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
-      } else {
-        document.getElementById('xe-eur').textContent = 'EUR: —';
-      }
-
-      if (xeAed && xeAed.rates && xeAed.rates.EUR) {
-        document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
-      } else {
-        document.getElementById('xe-aed').textContent = 'AED: —';
-      }
-
+      document.getElementById('xe-eur').textContent = xeEur?.rates?.RUB ? `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽` : 'EUR: —';
+      document.getElementById('xe-aed').textContent = xeAed?.rates?.EUR ? `AED: ${xeAed.rates.EUR.toFixed(2)} €` : 'AED: —';
       document.getElementById('xe-time').textContent = formatTime();
     } catch (err) {
       console.error('Ошибка загрузки:', err);
     }
   }
 
-  async function loadUsdRubChart(days = 7) {
+  async function loadChart(symbol, toSymbol, canvasId, chartRef) {
     try {
-      const res = await fetch(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=RUB&apikey=${ALPHA_VANTAGE_API_KEY}`);
+      const res = await fetch(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${symbol}&to_symbol=${toSymbol}&apikey=${ALPHA_VANTAGE_KEY}`);
       const data = await res.json();
-      const timeSeries = data["Time Series FX (Daily)"];
+      const times = data['Time Series FX (Daily)'];
+      if (!times) throw new Error('Данные не найдены');
 
-      const labels = [];
-      const rates = [];
-      const sortedDates = Object.keys(timeSeries).sort().slice(-days);
-      for (let date of sortedDates) {
-        labels.push(date);
-        rates.push(parseFloat(timeSeries[date]["4. close"]));
-      }
+      const labels = Object.keys(times).slice(0, 30).reverse();
+      const rates = labels.map(date => parseFloat(times[date]['4. close']));
 
-      if (usdChartInstance) usdChartInstance.destroy();
+      if (window[chartRef]) window[chartRef].destroy();
 
-      usdChartInstance = new Chart(document.getElementById('usdChart').getContext('2d'), {
+      window[chartRef] = new Chart(document.getElementById(canvasId).getContext('2d'), {
         type: 'line',
         data: {
           labels,
           datasets: [{
-            label: 'USD → RUB',
+            label: `${symbol} → ${toSymbol}`,
             data: rates,
-            borderColor: 'limegreen',
-            backgroundColor: 'rgba(0,200,83,0.2)',
+            borderColor: symbol === 'USD' ? 'limegreen' : 'deepskyblue',
+            backgroundColor: symbol === 'USD' ? 'rgba(0,200,83,0.2)' : 'rgba(30,144,255,0.2)',
             tension: 0.3,
             pointRadius: 4
           }]
@@ -183,14 +169,15 @@
         },
         plugins: [ChartDataLabels]
       });
-    } catch (e) {
-      console.error('Ошибка загрузки графика USD/RUB:', e);
+    } catch (err) {
+      console.error(`Ошибка загрузки графика ${symbol}/${toSymbol}:`, err);
     }
   }
 
   function refreshCharts() {
     const days = parseInt(document.getElementById('range-select').value);
-    loadUsdRubChart(days);
+    loadChart('USD', 'RUB', 'usdChart', 'usdChartInstance');
+    loadChart('EUR', 'USD', 'eurChart', 'eurChartInstance');
   }
 
   updateRates();
@@ -200,4 +187,3 @@
 
 </body>
 </html>
-
