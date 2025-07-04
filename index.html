@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Валютный Дашборд</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     :root {
@@ -99,7 +99,6 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
-  const TWELVE_API_KEY = '97d92fd0b70d4a3e91c82d1bf16894b4';
 
   function formatTime(date = new Date()) {
     return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -115,24 +114,18 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch(`https://api.twelvedata.com/price?symbol=EUR/RUB&apikey=${TWELVE_API_KEY}`).then(r => r.json());
-      const xeAed = await fetch(`https://api.twelvedata.com/price?symbol=AED/EUR&apikey=${TWELVE_API_KEY}`).then(r => r.json());
+      const xeEur = await fetch('https://api.frankfurter.app/latest?from=EUR&to=RUB').then(r => r.json());
+      const xeAed = await fetch('https://api.frankfurter.app/latest?from=AED&to=EUR').then(r => r.json());
 
-      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.price ? parseFloat(xeEur.price).toFixed(2) : '—'} ₽`;
-      document.getElementById('xe-aed').textContent = `AED: ${xeAed.price ? parseFloat(xeAed.price).toFixed(2) : '—'} €`;
+      document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
+      document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
       document.getElementById('xe-time').textContent = formatTime();
     } catch (err) {
       console.error('Ошибка загрузки:', err);
     }
   }
 
-  // Остальной код без изменений
   updateRates();
-  refreshCharts();
-  setInterval(() => {
-    updateRates();
-    refreshCharts();
-  }, UPDATE_INTERVAL);
 </script>
 
 </body>
