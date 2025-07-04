@@ -99,6 +99,8 @@
 
 <script>
   const UPDATE_INTERVAL = 30000;
+  let usdChartInstance;
+  let eurChartInstance;
   const ALPHA_VANTAGE_API_KEY = 'IVTXEK30O075V4U2'; // замените на ваш ключ
 
   function formatTime(date = new Date()) {
@@ -137,26 +139,22 @@
   }
 
   async function loadUsdRubChart(days = 7) {
-    const labels = [];
-    const rates = [];
-    const today = new Date();
-    const API_URL = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=RUB&apikey=${ALPHA_VANTAGE_API_KEY}`;
-
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=RUB&apikey=${ALPHA_VANTAGE_API_KEY}`);
       const data = await res.json();
-      const series = data["Time Series FX (Daily)"];
-      if (!series) throw new Error("Invalid Alpha Vantage response");
+      const timeSeries = data["Time Series FX (Daily)"];
 
-      const sortedDates = Object.keys(series).sort((a, b) => new Date(a) - new Date(b));
-      const lastDays = sortedDates.slice(-days);
-
-      lastDays.forEach(date => {
+      const labels = [];
+      const rates = [];
+      const sortedDates = Object.keys(timeSeries).sort().slice(-days);
+      for (let date of sortedDates) {
         labels.push(date);
-        rates.push(parseFloat(series[date]["4. close"]));
-      });
+        rates.push(parseFloat(timeSeries[date]["4. close"]));
+      }
 
-      new Chart(document.getElementById('usdChart').getContext('2d'), {
+      if (usdChartInstance) usdChartInstance.destroy();
+
+      usdChartInstance = new Chart(document.getElementById('usdChart').getContext('2d'), {
         type: 'line',
         data: {
           labels,
@@ -173,25 +171,20 @@
           plugins: {
             datalabels: {
               align: 'top',
-              anchor: 'end',
               color: '#fff',
-              formatter: value => value.toFixed(2)
+              formatter: v => v.toFixed(2)
             }
           },
           scales: {
-            y: {
-              title: { display: true, text: 'Курс' }
-            },
-            x: {
-              title: { display: true, text: 'Дата' }
-            }
+            y: { title: { display: true, text: 'Курс' } },
+            x: { title: { display: true, text: 'Дата' } }
           },
           responsive: true
         },
         plugins: [ChartDataLabels]
       });
-    } catch (err) {
-      console.error('Ошибка загрузки графика USD/RUB:', err);
+    } catch (e) {
+      console.error('Ошибка загрузки графика USD/RUB:', e);
     }
   }
 
