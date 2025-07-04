@@ -114,8 +114,8 @@
       document.getElementById('cbr-rub').textContent = `RUB: 1.00 ₽`;
       document.getElementById('cbr-time').textContent = formatTime();
 
-      const xeEur = await fetch('https://v6.exchangerate-api.com/v6/70ae1163ce4a925c7230c499/latest/EUR').then(r => r.json());
-      const xeAed = await fetch('https://v6.exchangerate-api.com/v6/70ae1163ce4a925c7230c499/latest/AED').then(r => r.json());
+      const xeEur = await fetch('https://open.er-api.com/v6/latest/EUR').then(r => r.json());
+      const xeAed = await fetch('https://open.er-api.com/v6/latest/AED').then(r => r.json());
 
       console.log("XE EUR Response:", xeEur);
       console.log("XE AED Response:", xeAed);
