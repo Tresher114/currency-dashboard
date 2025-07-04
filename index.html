@@ -99,7 +99,7 @@
 
 <script>
   const UPDATE_INTERVAL = 60000; // 1 минута
-  const TWELVE_DATA_API_KEY = '3a35c003318a4699a55d5c1581b6ebe8';
+  const TWELVE_DATA_API_KEY = '0bab7af67ed34ba4922a438acc4ff2d5';
 
   let usdChartInstance = null;
   let eurChartInstance = null;
@@ -129,9 +129,9 @@
     }
   }
 
-  async function loadChart(symbol, toSymbol, canvasId, chartRef) {
+  async function loadChart(symbol, toSymbol, canvasId, chartRef, days) {
     try {
-      const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}/${toSymbol}&interval=1day&apikey=${TWELVE_DATA_API_KEY}&outputsize=30`);
+      const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}/${toSymbol}&interval=1day&outputsize=${days}&apikey=${TWELVE_DATA_API_KEY}`);
       const data = await res.json();
       if (!data?.values) throw new Error('Данные не найдены');
 
@@ -176,8 +176,8 @@
 
   function refreshCharts() {
     const days = parseInt(document.getElementById('range-select').value);
-    loadChart('USD', 'RUB', 'usdChart', 'usdChartInstance');
-    loadChart('EUR', 'USD', 'eurChart', 'eurChartInstance');
+    loadChart('USD', 'RUB', 'usdChart', 'usdChartInstance', days);
+    loadChart('EUR', 'USD', 'eurChart', 'eurChartInstance', days);
   }
 
   updateRates();
