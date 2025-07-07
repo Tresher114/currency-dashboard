@@ -28,14 +28,14 @@
     .grid-container {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: auto auto;
+      grid-template-rows: repeat(2, 1fr);
       gap: 1vh 1vw;
       padding: 1vh 1vw;
       height: 100vh;
       box-sizing: border-box;
     }
 
-    .card {
+    .card, .chart-card {
       background: var(--card);
       border-radius: 1em;
       padding: 1.5vh 1vw;
@@ -45,7 +45,7 @@
       justify-content: center;
       align-items: center;
       text-align: center;
-      height: 100%;
+      overflow: hidden;
     }
 
     .rate {
@@ -55,11 +55,17 @@
       font-weight: bold;
     }
 
-    .loading { color: var(--muted); }
-
     canvas {
       width: 100% !important;
-      height: 100% !important;
+      height: auto !important;
+      max-height: 60vh;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0.5em;
     }
 
     .floating-controls {
@@ -83,23 +89,8 @@
       cursor: pointer;
     }
 
-    .chart-row {
-      display: flex;
-      grid-column: span 3;
-      gap: 1vw;
-      height: 100%;
-    }
-
-    .chart-card {
-      flex: 1;
-      background: var(--card);
-      border-radius: 1em;
-      padding: 1.5vh 1vw;
-      box-shadow: 0 0 15px rgba(0,0,0,0.4);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+    .chart-card h2 {
+      margin-bottom: 0.5em;
     }
   </style>
 </head>
@@ -122,23 +113,24 @@
     <div>Обновлено: <span id="xe-time">–</span></div>
   </div>
 
-  <div class="card">
-    <h2>📉 Profinanse & GOLD</h2>
-    <div id="profinanse-usd" class="rate loading">Загрузка...</div>
-    <div id="gold-usd" class="rate loading">Загрузка...</div>
-    <div style="color: var(--muted); font-size: 1vw;">Источник: profinanсe.кг</div>
+  <div class="chart-card">
+    <h2>📉 USD (ProFinance)</h2>
+    <iframe src="https://www.profinance.ru/charts/usd/rub"></iframe>
   </div>
 
-  <div class="chart-row">
-    <div class="chart-card">
-      <h2>📊 USD/RUB</h2>
-      <canvas id="usdChart"></canvas>
-    </div>
+  <div class="chart-card">
+    <h2>📊 USD/RUB</h2>
+    <canvas id="usdChart"></canvas>
+  </div>
 
-    <div class="chart-card">
-      <h2>📊 EUR/USD</h2>
-      <canvas id="eurChart"></canvas>
-    </div>
+  <div class="chart-card">
+    <h2>📊 EUR/USD</h2>
+    <canvas id="eurChart"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <h2>🏅 GOLD (ProFinance)</h2>
+    <iframe src="https://www.profinance.ru/charts/gold/lc17"></iframe>
   </div>
 </div>
 
@@ -152,6 +144,7 @@
 </div>
 
 <script>
+  Chart.register(ChartDataLabels);
   async function updateRates() {
     try {
       const cbr = await fetch('https://www.cbr-xml-daily.ru/daily_json.js').then(r => r.json());
@@ -167,70 +160,54 @@
       document.getElementById('xe-eur').textContent = `EUR: ${xeEur.rates.RUB.toFixed(2)} ₽`;
       document.getElementById('xe-aed').textContent = `AED: ${xeAed.rates.EUR.toFixed(2)} €`;
       document.getElementById('xe-time').textContent = new Date().toLocaleTimeString();
-
-      const profRes = await fetch('https://api.allorigins.win/raw?url=https://profinance.ru/usd');
-      const profText = await profRes.text();
-      const match = profText.match(/\d+(\.\d+)?/);
-      if (match) document.getElementById('profinanse-usd').textContent = `≈ ${match[0]} ₽`;
-
-      const goldRes = await fetch('https://api.allorigins.win/raw?url=https://profinance.ru/gold');
-      const goldText = await goldRes.text();
-      const gmatch = goldText.match(/\d+(\.\d+)?/);
-      if (gmatch) document.getElementById('gold-usd').textContent = `GOLD: ${gmatch[0]} $`;
-
     } catch (err) {
       console.error('Ошибка загрузки данных:', err);
     }
   }
 
-  async function loadChart(pair, canvasId) {
+  async function loadChart(id, symbol, apiSym, color) {
     try {
       const range = document.getElementById('range-select').value;
-      const response = await fetch(`https://api.twelvedata.com/time_series?symbol=${pair}&interval=1day&outputsize=${range}&apikey=3a35c003318a4699a55d5c1581b6ebe8`);
+      const response = await fetch(`https://api.twelvedata.com/time_series?symbol=${apiSym}&interval=1day&outputsize=${range}&apikey=3a35c003318a4699a55d5c1581b6ebe8`);
       const data = await response.json();
+      if (!data.values) throw new Error('Данные не найдены');
       const labels = data.values.map(v => v.datetime).reverse();
       const prices = data.values.map(v => parseFloat(v.close)).reverse();
 
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      if (window[canvasId + 'Chart']) window[canvasId + 'Chart'].destroy();
+      const ctx = document.getElementById(id).getContext('2d');
+      if (window[id + 'Chart']) window[id + 'Chart'].destroy();
 
-      window[canvasId + 'Chart'] = new Chart(ctx, {
+      window[id + 'Chart'] = new Chart(ctx, {
         type: 'line',
         data: {
           labels,
           datasets: [{
-            label: pair,
+            label: symbol,
             data: prices,
-            borderColor: pair === 'USD/RUB' ? '#00C853' : '#03A9F4',
+            borderColor: color,
             backgroundColor: 'transparent',
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 3
           }]
         },
         options: {
+          maintainAspectRatio: false,
           plugins: {
-            datalabels: {
-              color: '#fff',
-              align: 'top',
-              formatter: (value) => value.toFixed(2)
-            },
+            datalabels: { color: '#fff', anchor: 'end', align: 'top', formatter: val => val.toFixed(2) },
             legend: { labels: { color: '#fff' } }
           },
-          scales: {
-            x: { ticks: { color: '#fff' } },
-            y: { ticks: { color: '#fff' } }
-          }
+          scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
         },
         plugins: [ChartDataLabels]
       });
-
     } catch (err) {
-      console.error(`Ошибка загрузки графика ${pair}:`, err);
+      console.error(`Ошибка загрузки графика ${symbol}:`, err);
     }
   }
 
   function refreshCharts() {
-    loadChart('USD/RUB', 'usdChart');
-    loadChart('EUR/USD', 'eurChart');
+    loadChart('usdChart', 'USD → RUB', 'USD/RUB', '#00C853');
+    loadChart('eurChart', 'EUR → USD', 'EUR/USD', '#03A9F4');
   }
 
   updateRates();
@@ -241,6 +218,4 @@
 
 </body>
 </html>
-
-
 
